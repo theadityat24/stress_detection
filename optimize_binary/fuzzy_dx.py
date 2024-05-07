@@ -1,8 +1,9 @@
-# python fuzzy_dx.py ..\combined.csv -op fuzzy_dx3.npy -o 3 -w 5
+# python fuzzy_dx.py ..\combined.csv -op fuzzy_dx3.npy.gz -o 3 -w 5
 
 import pandas as pd
 import numpy as np
 import argparse
+import gzip
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument('in_path', type=str, help='Should be a csv, where wavelength column names start with "X"')
-    parser.add_argument('-op', '--out_path', default=r'fuzzy_dx.npy', type=str, help='Path of final npy file')
+    parser.add_argument('-op', '--out_path', default=r'fuzzy_dx.npy', type=str, help='Path of final compressed npy.gz file')
     parser.add_argument('-o', '--order', default=1, type=int, help='Number of times to repeat fuzzy dx, only returns last one')
     parser.add_argument('-w', '--window_size', default=5, type=int, help='Size of the filter, sorta like the "fuzziness"')
 
@@ -33,4 +34,6 @@ if __name__ == '__main__':
         arr = fuzzy_dx(arr)
         print(f'Calculated order {i+1}')
 
-    np.save(args.out_path, arr=arr)
+    f = gzip.GzipFile(args.out_path, "w")
+    np.save(file=f, arr=arr)
+    f.close()

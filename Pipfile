@@ -11,8 +11,10 @@ scikit-learn = "*"
 tensorflow = "*"
 keras = "*"
 openpyxl = "*"
+jupyter = "*"
 
 [dev-packages]
+jupyter = "*"
 
 [requires]
 python_version = "3"
