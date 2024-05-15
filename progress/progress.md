@@ -30,3 +30,17 @@ Ideally, a high performing model like this would be highly confident on most sam
 Confidence here was skewed way left, and had a low overall average, despite the accuracy being ~99%. Furthermore, noisy and synthetic data yielded a similar confidence distribution, and only had slightly less confidence on average than the original data. 
 
 Overall, this is a poor way of measuring confidence.
+
+## 5/14/24
+### Individual Stresses
+Started trying to predict individual stresses. So far, using spectrographic data, similar to the model used for binary prediction, hasn't really worked. I am getting really good results using the calculated traits (100% validation accuracy).
+
+### Interpretation
+I tried a similar method to Grad-CAM to calculate the model's "sensitivity" to every trait. Based on [this paper](https://www.sciencedirect.com/science/article/pii/S1051200417302385).
+
+$$
+R_i = \frac{\partial f}{\partial x_i} \cdot x_i
+$$
+
+The sensitivities for every trait did not significantly differ accross the different stresses. I tried using dropout layers and regularization to try and force the model to pick only a few traits to consider, but it didn't really help. Overall, not very useful. Maybe a different way of calculating sensitivities would work better.
+
