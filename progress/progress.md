@@ -44,3 +44,19 @@ $$
 
 The sensitivities for every trait did not significantly differ accross the different stresses. I tried using dropout layers and regularization to try and force the model to pick only a few traits to consider, but it didn't really help. Overall, not very useful. Maybe a different way of calculating sensitivities would work better.
 
+## 5/15/24
+### Layer-wise Relevance Propagation
+Tried a different method for explaining the neural network's predictions, following [the same paper from earlier](https://www.sciencedirect.com/science/article/pii/S1051200417302385#br0050), which discussed a method described in [this paper](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140#sec019). 
+
+After a round of forward propagation, relevancy scores are calculated for each node going backwards through the layers. Relevancy of a the nodes in a layer is based on the contribution each node had on all of the nodes in the succeeding layer, scaled by the relevance of the nodes in that succeeding layer. The relevance of the output nodes are defined as their own activations. Scaling factors $\alpha$ and $\beta$ are applied to positive weights and negative weights respectively.
+
+The way I have it implemented right now, it's stupidly slow (~60s for 1000 samples). Some clever vectorization would probably help. 
+
+![LRP, alpha=1, beta=0](lrp_a1_b0.png)
+
+![LRP, alpha=1, beta=0](lrp_a3_b2.png)
+
+Much more interpretable results than with other methods. Might be worth using this method on the CNN for binary classification. 
+
+These plots are on random stressed samples. More rigorous statistical analysis of this relevancy data across the whole dataset could be useful. 
+
