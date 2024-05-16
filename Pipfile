@@ -12,6 +12,7 @@ tensorflow = "*"
 keras = "*"
 openpyxl = "*"
 jupyter = "*"
+tensorflow-model-optimization = "*"
 
 [dev-packages]
 jupyter = "*"
