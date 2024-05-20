@@ -60,3 +60,25 @@ Much more interpretable results than with other methods. Might be worth using th
 
 These plots are on random stressed samples. More rigorous statistical analysis of this relevancy data across the whole dataset could be useful. 
 
+## 5/20/24
+### Spectral Model for Individual Stresses
+Using only the first derivative and adding a bunch of dense layers made it work. Took way longer to train.
+
+Accuracy at 99.89%.
+
+### Grad-CAM, again
+Grad-CAM on this model looks much different. 
+
+![Grad-CAM individual](grad_cam_individual.png)
+
+No peaks, but a few big troughs, creating the appearance of 4 wide bands. I'm not sure what to make of it.
+
+### LRP, again
+The LRP results were very different from Grad-CAM.
+
+![LRP individual, alpha=2, beta=1](lrp_individual_a2_b1.png)
+
+Lots of variance between samples, can make out distinct peaks and troughs. Seems much more interpretable than Grad-CAM. Lots of noise, hard to tell if it's meaningful.
+
+Due to Max-Pooling and Average-Pooling layers, the resolution is low (~8nm).
+
