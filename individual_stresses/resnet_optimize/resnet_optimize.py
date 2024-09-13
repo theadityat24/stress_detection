@@ -111,94 +111,98 @@ def score(
     d_reg,
     n_10_blocks
 ):
-    if x_spec_train.shape[1] < (max_pool_n **n_cnn_blocks * blur_factor):
-        print(f'{max_pool_n} {n_cnn_blocks}')
+    try:
+        if x_spec_train.shape[1] < (max_pool_n **n_cnn_blocks * blur_factor):
+            print(f'{max_pool_n} {n_cnn_blocks}')
+            return 0
+        start = perf_counter()
+        fuzzy_win = 5
+
+        cnn_model_layers = [
+            layers.GaussianNoise(noise_factor),
+            layers.Conv1D(1, fuzzy_win*2, trainable=False, kernel_initializer=fuzzy_dx_init),
+            layers.AveragePooling1D((blur_factor,)),
+        ] + [
+            lambda x: ResBlock1D(x, kernel_size=(kernel_size,), max_pool_n=(max_pool_n,), c_reg=c_reg) for _ in range(n_cnn_blocks)
+        ] + [
+            layers.SpatialDropout1D(spatial_dropout_k) for _ in range(n_cnn_blocks)
+        ] + [
+            layers.Flatten()
+        ] + [
+            layers.Dense(20, activation='relu', kernel_regularizer=L2(d_reg)) for _ in range(n_20_blocks)
+        ] + [
+            layers.Dropout(dropout_k) for _ in range(n_20_blocks)
+        ] + [
+            layers.Dense(10, activation='relu', kernel_regularizer=L2(d_reg)) for _ in range(n_10_blocks)
+        ] + [
+            layers.Dropout(dropout_k) for _ in range(n_10_blocks)
+        ] + [
+            layers.Dense(1, activation='sigmoid')
+        ]
+
+        cnn_model_inputs = layers.Input(shape=(x_spec_train.shape[1],1))
+
+        fx = cnn_model_inputs
+        for layer in cnn_model_layers:
+            fx = layer(fx)
+
+        cnn_model_outputs = fx
+        cnn_model = Model(inputs=cnn_model_inputs, outputs=cnn_model_outputs)
+
+        cnn_model.compile(optimizer=Adam(1e-4), loss='binary_crossentropy')
+
+        cnn_model.fit(
+            cnn_reshape(x_spec_train),
+            yb_train,
+            epochs=500,
+            validation_data=(cnn_reshape(x_spec_val), yb_val),
+            batch_size=5,
+            verbose=0
+        )
+
+        accuracy = ((cnn_model.predict(cnn_reshape(x_spec_val), verbose=0) > .5) == yb_val).mean()
+
+        with open(LOG_PATH, 'a',newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                'noise_factor',
+                'blur_factor',
+                'kernel_size',
+                'max_pool_n',
+                'c_reg',
+                'spatial_dropout_k',
+                'n_cnn_blocks',
+                'dropout_k',
+                'n_20_blocks',
+                'd_reg',
+                'n_10_blocks',
+                'accuracy',
+                'time'
+            ])
+
+            writer.writerow({
+                'noise_factor': noise_factor,
+                'blur_factor': blur_factor,
+                'kernel_size': kernel_size,
+                'max_pool_n': max_pool_n,
+                'c_reg': c_reg,
+                'spatial_dropout_k':spatial_dropout_k,
+                'n_cnn_blocks':n_cnn_blocks,
+                'dropout_k':dropout_k,
+                'n_20_blocks':n_20_blocks,
+                'd_reg':d_reg,
+                'n_10_blocks':n_10_blocks,
+                'accuracy': accuracy,
+                'time': perf_counter() - start
+            })
+
+        return accuracy
+    except:
+        print('error')
         return 0
-    start = perf_counter()
-    fuzzy_win = 5
-
-    cnn_model_layers = [
-        layers.GaussianNoise(noise_factor),
-        layers.Conv1D(1, fuzzy_win*2, trainable=False, kernel_initializer=fuzzy_dx_init),
-        layers.AveragePooling1D((blur_factor,)),
-    ] + [
-        lambda x: ResBlock1D(x, kernel_size=(kernel_size,), max_pool_n=(max_pool_n,), c_reg=c_reg) for _ in range(n_cnn_blocks)
-    ] + [
-        layers.SpatialDropout1D(spatial_dropout_k) for _ in range(n_cnn_blocks)
-    ] + [
-        layers.Flatten()
-    ] + [
-        layers.Dense(20, activation='relu', kernel_regularizer=L2(d_reg)) for _ in range(n_20_blocks)
-    ] + [
-        layers.Dropout(dropout_k) for _ in range(n_20_blocks)
-    ] + [
-        layers.Dense(10, activation='relu', kernel_regularizer=L2(d_reg)) for _ in range(n_10_blocks)
-    ] + [
-        layers.Dropout(dropout_k) for _ in range(n_10_blocks)
-    ] + [
-        layers.Dense(1, activation='sigmoid')
-    ]
-
-    cnn_model_inputs = layers.Input(shape=(x_spec_train.shape[1],1))
-
-    fx = cnn_model_inputs
-    for layer in cnn_model_layers:
-        fx = layer(fx)
-
-    cnn_model_outputs = fx
-    cnn_model = Model(inputs=cnn_model_inputs, outputs=cnn_model_outputs)
-
-    cnn_model.compile(optimizer=Adam(1e-4), loss='binary_crossentropy')
-
-    cnn_model.fit(
-        cnn_reshape(x_spec_train),
-        yb_train,
-        epochs=5,
-        validation_data=(cnn_reshape(x_spec_val), yb_val),
-        batch_size=5,
-        verbose=0
-    )
-
-    accuracy = ((cnn_model.predict(cnn_reshape(x_spec_val), verbose=0) > .5) == yb_val).mean()
-
-    with open(LOG_PATH, 'a',newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            'noise_factor',
-            'blur_factor',
-            'kernel_size',
-            'max_pool_n',
-            'c_reg',
-            'spatial_dropout_k',
-            'n_cnn_blocks',
-            'dropout_k',
-            'n_20_blocks',
-            'd_reg',
-            'n_10_blocks',
-            'accuracy',
-            'time'
-        ])
-
-        writer.writerow({
-            'noise_factor': noise_factor,
-            'blur_factor': blur_factor,
-            'kernel_size': kernel_size,
-            'max_pool_n': max_pool_n,
-            'c_reg': c_reg,
-            'spatial_dropout_k':spatial_dropout_k,
-            'n_cnn_blocks':n_cnn_blocks,
-            'dropout_k':dropout_k,
-            'n_20_blocks':n_20_blocks,
-            'd_reg':d_reg,
-            'n_10_blocks':n_10_blocks,
-            'accuracy': accuracy,
-            'time': perf_counter() - start
-        })
-
-    return accuracy
 
 res = skopt.gp_minimize(
     score,
     dimensions,
     random_state=7,
-    n_calls=100
+    n_calls=500
 )
