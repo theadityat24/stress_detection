@@ -13,6 +13,9 @@ keras = "*"
 openpyxl = "*"
 jupyter = "*"
 tensorflow-model-optimization = "*"
+xgboost = "*"
+imblearn = "*"
+scikit-optimize = "*"
 
 [dev-packages]
 jupyter = "*"

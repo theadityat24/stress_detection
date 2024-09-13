@@ -12,5 +12,5 @@ for i in dfs.keys():
     dfs[i].rename(columns=dict(zip([s + '.1' for s in stresses], stresses)), inplace=True)
 
 df = dfs[1].join(dfs[2], how='left', lsuffix='_')
-
+df.drop(columns=[s for s in df.columns if (s[-1] == '_')], inplace=True)
 df.to_csv('combined.csv')

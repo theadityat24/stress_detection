@@ -1,0 +1,1 @@
+noise_factor,blur_factor,kernel_size,max_pool_n,c_reg,spatial_dropout_k,n_cnn_blocks,dropout_k,n_20_blocks,d_reg,n_10_blocks,accuracy,time
