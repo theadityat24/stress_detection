@@ -14,7 +14,8 @@ from time import perf_counter
 
 import skopt
 
-LOG_PATH = os.path.join('.', 'bayes_log.csv')\
+LOG_PATH = os.path.join('..', '..', '..', 'bayes_log.csv')
+N_EPOCHS = 400
 
 if not os.path.exists(LOG_PATH):
     with open(LOG_PATH, 'w',newline='') as f:
@@ -87,7 +88,7 @@ dimensions = [
     skopt.space.Real(name='noise_factor', low=.0, high=.2),
     skopt.space.Integer(name='blur_factor', low=1, high=5),
     skopt.space.Integer(name='kernel_size', low=3, high=32),
-    skopt.space.Integer(name='max_pool_n', low=1, high=10),
+    skopt.space.Integer(name='max_pool_n', low=1, high=5),
     skopt.space.Real(name='c_reg', low=.0, high=.1),
     skopt.space.Real(name='spatial_dropout_k', low=.0, high=.5),
     skopt.space.Integer(name='n_cnn_blocks', low=1, high=5),
@@ -96,6 +97,56 @@ dimensions = [
     skopt.space.Real(name='d_reg', low=.0, high=.1),
     skopt.space.Integer(name='n_10_blocks', low=1, high=5),
 ]
+
+def log(
+    noise_factor,
+    blur_factor,
+    kernel_size,
+    max_pool_n,
+    c_reg,
+    spatial_dropout_k,
+    n_cnn_blocks,
+    dropout_k,
+    n_20_blocks,
+    d_reg,
+    n_10_blocks,
+    accuracy,
+    seconds
+):
+    with open(LOG_PATH, 'a',newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            'noise_factor',
+            'blur_factor',
+            'kernel_size',
+            'max_pool_n',
+            'c_reg',
+            'spatial_dropout_k',
+            'n_cnn_blocks',
+            'dropout_k',
+            'n_20_blocks',
+            'd_reg',
+            'n_10_blocks',
+            'accuracy',
+            'time'
+        ])
+
+        writer.writerow({
+            'noise_factor': noise_factor,
+            'blur_factor': blur_factor,
+            'kernel_size': kernel_size,
+            'max_pool_n': max_pool_n,
+            'c_reg': c_reg,
+            'spatial_dropout_k':spatial_dropout_k,
+            'n_cnn_blocks':n_cnn_blocks,
+            'dropout_k':dropout_k,
+            'n_20_blocks':n_20_blocks,
+            'd_reg':d_reg,
+            'n_10_blocks':n_10_blocks,
+            'accuracy': accuracy,
+            'time': seconds
+        })
+
+# Returns 1 - accuracy, because we're using gp_minimize. Logs accuracy. 
 
 @skopt.utils.use_named_args(dimensions=dimensions)
 def score(
@@ -114,7 +165,23 @@ def score(
     try:
         if x_spec_train.shape[1] < (max_pool_n **n_cnn_blocks * blur_factor):
             print(f'{max_pool_n} {n_cnn_blocks}')
-            return 0
+            log(
+                noise_factor,
+                blur_factor,
+                kernel_size,
+                max_pool_n,
+                c_reg,
+                spatial_dropout_k,
+                n_cnn_blocks,
+                dropout_k,
+                n_20_blocks,
+                d_reg,
+                n_10_blocks,
+                0,
+                0,
+            )
+            return 1
+        
         start = perf_counter()
         fuzzy_win = 5
 
@@ -154,7 +221,7 @@ def score(
         cnn_model.fit(
             cnn_reshape(x_spec_train),
             yb_train,
-            epochs=500,
+            epochs=N_EPOCHS,
             validation_data=(cnn_reshape(x_spec_val), yb_val),
             batch_size=5,
             verbose=0
@@ -162,47 +229,69 @@ def score(
 
         accuracy = ((cnn_model.predict(cnn_reshape(x_spec_val), verbose=0) > .5) == yb_val).mean()
 
-        with open(LOG_PATH, 'a',newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=[
-                'noise_factor',
-                'blur_factor',
-                'kernel_size',
-                'max_pool_n',
-                'c_reg',
-                'spatial_dropout_k',
-                'n_cnn_blocks',
-                'dropout_k',
-                'n_20_blocks',
-                'd_reg',
-                'n_10_blocks',
-                'accuracy',
-                'time'
-            ])
+        log(
+            noise_factor,
+            blur_factor,
+            kernel_size,
+            max_pool_n,
+            c_reg,
+            spatial_dropout_k,
+            n_cnn_blocks,
+            dropout_k,
+            n_20_blocks,
+            d_reg,
+            n_10_blocks,
+            accuracy,
+            perf_counter()-start
+        )
 
-            writer.writerow({
-                'noise_factor': noise_factor,
-                'blur_factor': blur_factor,
-                'kernel_size': kernel_size,
-                'max_pool_n': max_pool_n,
-                'c_reg': c_reg,
-                'spatial_dropout_k':spatial_dropout_k,
-                'n_cnn_blocks':n_cnn_blocks,
-                'dropout_k':dropout_k,
-                'n_20_blocks':n_20_blocks,
-                'd_reg':d_reg,
-                'n_10_blocks':n_10_blocks,
-                'accuracy': accuracy,
-                'time': perf_counter() - start
-            })
-
-        return accuracy
+        return 1-accuracy
     except:
         print('error')
-        return 0
+        log(
+            noise_factor,
+            blur_factor,
+            kernel_size,
+            max_pool_n,
+            c_reg,
+            spatial_dropout_k,
+            n_cnn_blocks,
+            dropout_k,
+            n_20_blocks,
+            d_reg,
+            n_10_blocks,
+            0,
+            0,
+        )
+        return 1
+
+x0 = None
+y0 = None
+
+if os.path.exists(LOG_PATH):
+    gp0 = pd.read_csv(LOG_PATH)
+    if gp0.shape[0] > 0:
+        
+        x0 = gp0[[
+            'noise_factor',
+            'blur_factor',
+            'kernel_size',
+            'max_pool_n',
+            'c_reg',
+            'spatial_dropout_k',
+            'n_cnn_blocks',
+            'dropout_k',
+            'n_20_blocks',
+            'd_reg',
+            'n_10_blocks',
+        ]].values.tolist()
+        y0 = (1-gp0['accuracy'].values).tolist()
 
 res = skopt.gp_minimize(
     score,
     dimensions,
     random_state=7,
-    n_calls=500
+    n_calls=500,
+    x0=x0,
+    y0=y0
 )
